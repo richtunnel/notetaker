@@ -1,0 +1,76 @@
+# NoteHive full local stack (backend only — the API IS the product surface)
+# Usage: docker compose -f deploy/docker/docker-compose.yml up --build
+name: notehive
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    # WAL journaling tuned for durable streams + bulk version snapshots:
+    # synchronous_commit=on (default, durability), wal_compression, larger
+    # checkpoints to absorb note-version write bursts.
+    command: >
+      postgres -c wal_level=replica -c max_wal_size=2GB -c min_wal_size=512MB
+               -c checkpoint_timeout=15min -c checkpoint_completion_target=0.9
+               -c wal_compression=on -c max_connections=120
+    environment:
+      POSTGRES_DB: notehive
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d notehive"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    # AOF persistence: Redis Streams are the authoritative event backbone,
+    # so durability across restarts is required (spec: queues).
+    command: redis-server --appendonly yes --appendfsync everysec --maxmemory-policy noeviction
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile
+    environment:
+      QUARKUS_DATASOURCE_USERNAME: notehive_app
+      QUARKUS_DATASOURCE_PASSWORD: notehive_app_pw
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/notehive
+      QUARKUS_FLYWAY_USERNAME: notehive_migrator
+      QUARKUS_FLYWAY_PASSWORD: notehive_migrator_pw
+      NOTEHIVE_WORKER_DB_USERNAME: notehive_worker
+      NOTEHIVE_WORKER_DB_PASSWORD: notehive_worker_pw
+      NOTEHIVE_REDIS_URL: redis://redis:6379/0
+      # DEV defaults: JWT keys auto-generated at target/jwt-keys inside the
+      # container. For real deployments set NOTEHIVE_JWT_KEY_MODE=jwks
+      # (+ JWKS url of your IdP) or inject a static PEM keypair, and set:
+      NOTEHIVE_CRYPTO_CURSOR_KEY: ""
+      NOTEHIVE_CRYPTO_AES_KEY: ""
+      NOTEHIVE_SECURE_COOKIES: "false"
+      HOSTNAME: notehive-local
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

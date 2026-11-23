@@ -1,0 +1,8 @@
+target/
+.idea/
+*.iml
+.vscode/
+.env
+*.log
+deploy/docker/initdb/*.sql.bak
+.DS_Store
