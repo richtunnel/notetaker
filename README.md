@@ -1,6 +1,6 @@
 # NoteApp
 
-Lightweight, production-oriented **backend** for team-collaborative note taking. Multi-tenant, event-driven, and hardened for enterprise use. No frontend ships with this project — the REST API + WebSocket gateway are the product surface.
+Lightweight, production-oriented **backend** for team-collaborative note taking.
 
 **Stack:** Java 21 · Quarkus 3.20 · PostgreSQL 16 (Row-Level Security) · Redis 7 (Streams + Pub/Sub + cache) · Lettuce · jose4j (JWT) · Hibernate/Panache · Flyway · Micrometer.
 
