@@ -247,15 +247,14 @@ BEGIN
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', r.t);
         EXECUTE format($f$
             CREATE POLICY %1$I_tenant_isolation ON %1$I TO notehive_app
-            USING (org_id = current_setting('app.tenant_id', true)::uuid)
-            WITH CHECK (org_id = current_setting('app.tenant_id', true)::uuid)
+            USING (org_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+            WITH CHECK (org_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
         $f$, r.t);
     END LOOP;
 END
 $$;
 
 -- audit trail is append-only for the application role
-CREATE POLICY audit_logs_no_update ON audit_logs TO notehive_app
-    FOR UPDATE USING (false);
-CREATE POLICY audit_logs_no_delete ON audit_logs TO notehive_app
-    FOR DELETE USING (false);
+-- (CREATE POLICY grammar: FOR <command> precedes TO <role>)
+CREATE POLICY audit_logs_no_update ON audit_logs FOR UPDATE TO notehive_app USING (false);
+CREATE POLICY audit_logs_no_delete ON audit_logs FOR DELETE TO notehive_app USING (false);

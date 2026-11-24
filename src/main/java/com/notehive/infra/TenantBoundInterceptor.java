@@ -12,14 +12,19 @@ import java.util.UUID;
 /**
  * Binds the PostgreSQL session GUC app.tenant_id (LOCAL to the transaction)
  * at method entry so Row-Level Security policies apply on every statement of
- * the transaction (V1__schema.sql). SET LOCAL guarantees the setting dies with
- * the transaction — pooled connections never leak tenant context. Requests
- * without a resolved principal proceed WITHOUT the GUC: under RLS that means
- * zero rows / failed WITH CHECK — fail-closed.
+ * the transaction (V1__schema.sql). Runs INSIDE the transaction (priority
+ * above the @Transactional interceptor): set_config(..., true) is
+ * transaction-local, so binding before the tx begins would autocommit and
+ * silently evaporate, leaving the GUC placeholder empty for the real work.
+ * SET LOCAL guarantees the setting dies with the transaction — pooled
+ * connections never leak tenant context. Requests without a resolved
+ * principal proceed WITHOUT the GUC: under RLS that means zero rows /
+ * failed WITH CHECK — fail-closed (and the policies NULLIF away the ''
+ * placeholder state, treating it the same as unset).
  */
 @Interceptor
 @TenantBound
-@jakarta.annotation.Priority(jakarta.interceptor.Interceptor.Priority.PLATFORM_BEFORE + 10)
+@jakarta.annotation.Priority(jakarta.interceptor.Interceptor.Priority.APPLICATION)
 public class TenantBoundInterceptor {
 
     @Inject

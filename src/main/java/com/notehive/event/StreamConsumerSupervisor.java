@@ -35,8 +35,11 @@ public class StreamConsumerSupervisor {
 
     void start(@Observes StartupEvent ev) {
         for (EventHandler handler : handlers) {
+            // Dedicated connection per consumer: XREADGROUP BLOCK occupies a
+            // Redis connection for the whole poll; sharing one connection
+            // would stall every other command behind it (client timeouts).
             var runner = new StreamConsumerRunner(handler, config,
-                    redis.commands(), dedup, metrics);
+                    redis.newDedicatedConnection(), dedup, metrics);
             runners.add(runner);
             Thread t = new Thread(runner, "consumer-" + handler.group());
             t.setDaemon(true);

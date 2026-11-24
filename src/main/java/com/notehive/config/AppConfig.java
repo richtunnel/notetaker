@@ -4,6 +4,7 @@ import io.smallrye.config.ConfigMapping;
 import io.smallrye.config.WithDefault;
 
 import java.time.Duration;
+import java.util.Optional;
 
 /**
  * Central, environment-driven configuration. Every ${VAR:default} in
@@ -120,14 +121,15 @@ public interface AppConfig {
         @WithDefault("static")
         String keyMode();
 
-        @WithDefault("")
-        String publicKeyPem();
+        // Optional on purpose: an EMPTY value (unset env, or "" like the
+        // compose defaults) must mean "not provided" — SmallRye's built-in
+        // converter maps the empty String to null, and a required String
+        // mapping would then abort startup with SRCFG00040.
+        Optional<String> publicKeyPem();
 
-        @WithDefault("")
-        String privateKeyPem();
+        Optional<String> privateKeyPem();
 
-        @WithDefault("")
-        String jwksUrl();
+        Optional<String> jwksUrl();
 
         /** Ephemeral dev key material directory (auto-generated keys persisted here). */
         @WithDefault("target/jwt-keys")
@@ -214,13 +216,18 @@ public interface AppConfig {
 
     @ConfigMapping(prefix = "notehive.crypto")
     interface Crypto {
-        /** Base64, 32 bytes: AES-GCM key for webhook secrets at rest. */
-        @WithDefault("")
-        String aesKey();
+        /**
+         * Base64, 32 bytes: AES-GCM key for webhook secrets at rest.
+         * Optional: empty/unset selects the clearly-logged dev fallback;
+         * production MUST set NOTEHIVE_CRYPTO_AES_KEY.
+         */
+        Optional<String> aesKey();
 
-        /** Base64, 32 bytes: HMAC key for pagination cursors. */
-        @WithDefault("")
-        String cursorHmacKey();
+        /**
+         * Base64, 32 bytes: HMAC key for pagination cursors. Optional: same
+         * unset/empty-means-dev-fallback contract as aesKey().
+         */
+        Optional<String> cursorHmacKey();
 
         /** PBKDF2 iterations (OWASP 2023 recommends 600k for SHA-512; 210k SHA-256). */
         @WithDefault("210000")

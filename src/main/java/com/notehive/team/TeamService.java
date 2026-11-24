@@ -34,7 +34,10 @@ public class TeamService {
 
     public record TeamView(UUID id, String name, String createdAt, String myRole) {}
 
+    // TenantBound binds the RLS GUC inside the tx — required for the
+    // WITH CHECK on the teams/team_members inserts below.
     @Transactional
+    @TenantBound
     public TeamView create(UUID tenantId, UUID userId, String name) {
         if (name == null || name.isBlank() || name.length() > 80) {
             throw new ApiException.Validation(ErrorCode.VALIDATION_FAILED, "name required (max 80)");
@@ -62,6 +65,7 @@ public class TeamService {
     }
 
     @Transactional
+    @TenantBound
     public void addMember(UUID tenantId, UUID actorId, UUID teamId,
                           String username, String role) {
         requireRole(tenantId, actorId, teamId, "editor");
@@ -95,6 +99,7 @@ public class TeamService {
     }
 
     @Transactional
+    @TenantBound
     public void removeMember(UUID tenantId, UUID actorId, UUID teamId, UUID targetUserId) {
         requireRole(tenantId, actorId, teamId, "editor");
         TeamMember member = TeamMember.findMembership(teamId, targetUserId)
@@ -145,14 +150,16 @@ public class TeamService {
             em.createNativeQuery("SELECT set_config('app.tenant_id', ?1, true)")
                     .setParameter(1, tenantId.toString())
                     .getSingleResult();
+            // single-column native query → List<String> (an Object[] cast
+            // would only fail once RLS actually returns rows)
             @SuppressWarnings("unchecked")
-            List<Object[]> rows = em.createNativeQuery(
+            List<String> rows = em.createNativeQuery(
                             "SELECT role FROM team_members WHERE team_id = ?1 AND user_id = ?2 " +
                             "AND org_id = current_setting('app.tenant_id', true)::uuid")
                     .setParameter(1, teamId)
                     .setParameter(2, userId)
                     .getResultList();
-            return rows.isEmpty() ? null : (String) rows.get(0)[0];
+            return rows.isEmpty() ? null : rows.get(0);
         }
     }
 

@@ -53,11 +53,11 @@ public class WebhookResource {
             throw new ApiException.Validation(ErrorCode.VALIDATION_FAILED,
                     "url must be a valid https:// URL");
         }
-        if (cryptoCfg.aesKey().isBlank()) {
+        if (cryptoCfg.aesKey().orElse("").isBlank()) {
             throw new ApiException.Validation(ErrorCode.VALIDATION_FAILED,
                     "notehive.crypto.aes-key must be configured to store webhook secrets");
         }
-        AesGcm aes = new AesGcm(Base64.getDecoder().decode(cryptoCfg.aesKey()));
+        AesGcm aes = new AesGcm(Base64.getDecoder().decode(cryptoCfg.aesKey().orElse("")));
         String secret = "whsec_" + UUID.randomUUID().toString().replace("-", "")
                 + UUID.randomUUID().toString().replace("-", "");
         UUID endpointId = UUID.randomUUID();

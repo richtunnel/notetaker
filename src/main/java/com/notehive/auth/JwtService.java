@@ -60,21 +60,21 @@ public class JwtService {
             return; // idempotent: safe under CDI and in tests
         }
         if ("jwks".equals(cfg.keyMode())) {
-            if (cfg.jwksUrl().isBlank()) {
+            if (cfg.jwksUrl().orElse("").isBlank()) {
                 throw new IllegalStateException("notehive.jwt.key-mode=jwks requires jwks-url");
             }
             var resolver = new HttpsJwksVerificationKeyResolver(
-                    new org.jose4j.jwk.HttpsJwks(cfg.jwksUrl()));
+                    new org.jose4j.jwk.HttpsJwks(cfg.jwksUrl().orElse("")));
             this.verifier = baseConsumerBuilder().setVerificationKeyResolver(resolver).build();
-            LOG.info("JWT verification via JWKS {}", cfg.jwksUrl());
+            LOG.info("JWT verification via JWKS {}", cfg.jwksUrl().orElse(""));
             return;
         }
         // static mode: load PEMs or generate+persist a dev keypair
         PublicKey publicKey;
         PrivateKey privateKey;
-        if (!cfg.publicKeyPem().isBlank() && !cfg.privateKeyPem().isBlank()) {
-            publicKey = (PublicKey) readPem(cfg.publicKeyPem());
-            privateKey = (PrivateKey) readPem(cfg.privateKeyPem());
+        if (!cfg.publicKeyPem().orElse("").isBlank() && !cfg.privateKeyPem().orElse("").isBlank()) {
+            publicKey = (PublicKey) readPem(cfg.publicKeyPem().orElse(""));
+            privateKey = (PrivateKey) readPem(cfg.privateKeyPem().orElse(""));
             LOG.info("JWT keys loaded from configuration");
         } else {
             Path dir = Path.of(cfg.devKeyDir());
@@ -94,7 +94,7 @@ public class JwtService {
                     privateKey = pair.getPrivate();
                     Files.writeString(pub, writePem(publicKey));
                     Files.writeString(priv, writePem(privateKey));
-                    LOG.warn("JWT dev keys GENERATED at {} — set notehive.jwt.public-key/private-key in production", dir);
+                    LOG.warn("JWT dev keys GENERATED at {} — set notehive.jwt.public-key-pem/private-key-pem in production", dir);
                 }
             } catch (Exception e) {
                 throw new IllegalStateException("JWT key initialization failed", e);

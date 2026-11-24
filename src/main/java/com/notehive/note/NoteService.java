@@ -255,8 +255,8 @@ public class NoteService {
                 LEFT JOIN users u ON u.id = n.updated_by
                 WHERE n.org_id = current_setting('app.tenant_id', true)::uuid
                   AND n.deleted_at IS NULL
-                  AND (?1::uuid IS NULL OR n.team_id = ?1)
-                  AND (?2::timestamptz IS NULL OR (n.updated_at, n.id) < (?2, ?3::uuid))
+                  AND (CAST(?1 AS uuid) IS NULL OR n.team_id = ?1)
+                  AND (CAST(?2 AS timestamptz) IS NULL OR (n.updated_at, n.id) < (?2, CAST(?3 AS uuid)))
                 ORDER BY n.updated_at DESC, n.id DESC
                 LIMIT ?4
                 """)
@@ -299,7 +299,7 @@ public class NoteService {
                 WHERE n.org_id = current_setting('app.tenant_id', true)::uuid
                   AND n.deleted_at IS NULL
                   AND n.search @@ websearch_to_tsquery('simple', ?2)
-                  AND (?1::uuid IS NULL OR n.team_id = ?1)
+                  AND (CAST(?1 AS uuid) IS NULL OR n.team_id = ?1)
                 ORDER BY rank DESC, n.updated_at DESC
                 LIMIT ?3
                 """)
@@ -325,7 +325,7 @@ public class NoteService {
                 LEFT JOIN users u ON u.id = v.author_id
                 WHERE v.org_id = current_setting('app.tenant_id', true)::uuid
                   AND v.note_id = ?1
-                  AND (?2::int IS NULL OR v.version < ?2)
+                  AND (CAST(?2 AS int) IS NULL OR v.version < ?2)
                 ORDER BY v.version DESC
                 LIMIT ?3
                 """)
@@ -383,7 +383,8 @@ public class NoteService {
 
     @SuppressWarnings("unchecked")
     private UUID teamOf(UUID tenantId, UUID noteId, boolean includeDeleted) {
-        List<Object[]> rows = em.createNativeQuery(
+        // single-column native query → List<UUID> (not Object[])
+        List<UUID> rows = em.createNativeQuery(
                         "SELECT team_id FROM notes WHERE id = ?1 AND org_id = " +
                         "current_setting('app.tenant_id', true)::uuid " +
                         (includeDeleted ? "" : "AND deleted_at IS NULL"))
@@ -392,7 +393,7 @@ public class NoteService {
         if (rows.isEmpty()) {
             throw new ApiException.NotFound(ErrorCode.NOTE_NOT_FOUND, "Note not found");
         }
-        return (UUID) rows.get(0)[0];
+        return rows.get(0);
     }
 
     private NoteView view(UUID noteId) {

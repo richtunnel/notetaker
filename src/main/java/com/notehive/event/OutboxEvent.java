@@ -4,12 +4,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.notehive.common.EventEnvelope;
 import com.notehive.common.EventSchemaValidator;
 import com.notehive.common.Json;
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.transaction.Transactional;
 
@@ -19,7 +23,18 @@ import java.util.UUID;
 /** Outbox row. Payload stored as jsonb. Not RLS-bound: the relay is infra. */
 @Entity
 @Table(name = "outbox_events")
-public class OutboxEvent extends PanacheEntity {
+public class OutboxEvent extends PanacheEntityBase {
+
+    // id generation is bound to the schema's bigserial sequence explicitly.
+    // (Extending PanacheEntity + its bare @GeneratedValue would resolve to
+    // Hibernate 6's AUTO default sequence "<table>_SEQ" — never created,
+    // because schema generation is 'none' and Flyway is authoritative.)
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "outbox_events_id_gen")
+    @SequenceGenerator(name = "outbox_events_id_gen", sequenceName = "outbox_events_id_seq",
+            allocationSize = 1)
+    @Column(name = "id")
+    public Long id;
 
     @Column(name = "event_id", nullable = false, unique = true)
     public UUID eventId;

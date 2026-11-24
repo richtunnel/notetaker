@@ -95,7 +95,7 @@ final class StreamConsumerRunner implements Runnable {
         LOG.info("Stream consumer starting group={} events={}", handler.group(), handler.eventTypes());
         try {
             redis.sync().xgroupCreate(
-                    XReadArgs.StreamOffset.from(config.stream(), "0-"),
+                    XReadArgs.StreamOffset.from(config.stream(), "0-0"),
                     handler.group(),
                     XGroupCreateArgs.Builder.mkstream());
         } catch (Exception e) {

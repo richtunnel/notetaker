@@ -22,7 +22,7 @@ public class CdiBeans {
     @Produces
     @ApplicationScoped
     public CursorCodec cursorCodec(AppConfig.Crypto cfg) {
-        byte[] key = decode32(cfg.cursorHmacKey(),
+        byte[] key = decode32(cfg.cursorHmacKey().orElse(""),
                 "notehive-dev-cursor-hmac-key-0123456789abcdef");
         return new CursorCodec(key);
     }

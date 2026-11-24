@@ -35,8 +35,8 @@ class PasswordHasherTest {
     private com.notehive.config.AppConfig.Crypto testCrypto(int iterations) {
         // minimal stub of the ConfigMapping interface
         return new com.notehive.config.AppConfig.Crypto() {
-            @Override public String aesKey() { return ""; }
-            @Override public String cursorHmacKey() { return ""; }
+            @Override public java.util.Optional<String> aesKey() { return java.util.Optional.empty(); }
+            @Override public java.util.Optional<String> cursorHmacKey() { return java.util.Optional.empty(); }
             @Override public int pbkdf2Iterations() { return iterations; }
         };
     }

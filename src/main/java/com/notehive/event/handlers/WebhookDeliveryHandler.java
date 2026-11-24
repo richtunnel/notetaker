@@ -58,8 +58,8 @@ public class WebhookDeliveryHandler implements EventHandler {
                 .connectTimeout(Duration.ofSeconds(3))
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
-        if (!cryptoCfg.aesKey().isBlank()) {
-            aes = new AesGcm(Base64.getDecoder().decode(cryptoCfg.aesKey()));
+        if (!cryptoCfg.aesKey().orElse("").isBlank()) {
+            aes = new AesGcm(Base64.getDecoder().decode(cryptoCfg.aesKey().orElse("")));
         }
     }
 

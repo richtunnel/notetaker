@@ -17,9 +17,9 @@ class JwtServiceTest {
             @Override public String issuer() { return "notehive-test"; }
             @Override public String audience() { return "notehive-test-api"; }
             @Override public String keyMode() { return "static"; }
-            @Override public String publicKeyPem() { return ""; }
-            @Override public String privateKeyPem() { return ""; }
-            @Override public String jwksUrl() { return ""; }
+            @Override public java.util.Optional<String> publicKeyPem() { return java.util.Optional.empty(); }
+            @Override public java.util.Optional<String> privateKeyPem() { return java.util.Optional.empty(); }
+            @Override public java.util.Optional<String> jwksUrl() { return java.util.Optional.empty(); }
             @Override public String devKeyDir() { return devDir; }
         };
         JwtService svc = new JwtService(cfg);

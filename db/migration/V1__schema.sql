@@ -247,8 +247,8 @@ BEGIN
         EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', r.t);
         EXECUTE format($f$
             CREATE POLICY %1$I_tenant_isolation ON %1$I TO notehive_app
-            USING (org_id = current_setting('app.tenant_id', true)::uuid)
-            WITH CHECK (org_id = current_setting('app.tenant_id', true)::uuid)
+            USING (org_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
+            WITH CHECK (org_id = NULLIF(current_setting('app.tenant_id', true), '')::uuid)
         $f$, r.t);
     END LOOP;
 END

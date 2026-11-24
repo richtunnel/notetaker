@@ -1,11 +1,8 @@
-# NoteHive
+# NoteApp
 
-Lightweight, production-oriented **backend** for team-collaborative note taking.
-Multi-tenant, event-driven, and hardened for enterprise use. No frontend ships
-with this project — the REST API + WebSocket gateway are the product surface.
+Lightweight, production-oriented **backend** for team-collaborative note taking. Multi-tenant, event-driven, and hardened for enterprise use. No frontend ships with this project — the REST API + WebSocket gateway are the product surface.
 
-**Stack:** Java 21 · Quarkus 3.20 · PostgreSQL 16 (Row-Level Security) · Redis 7
-(Streams + Pub/Sub + cache) · Lettuce · jose4j (JWT) · Hibernate/Panache · Flyway · Micrometer.
+**Stack:** Java 21 · Quarkus 3.20 · PostgreSQL 16 (Row-Level Security) · Redis 7 (Streams + Pub/Sub + cache) · Lettuce · jose4j (JWT) · Hibernate/Panache · Flyway · Micrometer.
 
 ## Run locally
 
@@ -35,7 +32,7 @@ mvn clean package       # 28 unit tests, Quarkus augmentation, quarkus-run.jar
 ## What is inside (requested focus → implementation)
 
 | Concern | Where / how |
-|---|---|
+| --- | --- |
 | Security | RLS on every tenant table (`V1__schema.sql`), tenant GUC bound per transaction (`TenantBoundInterceptor`), PBKDF2 passwords (210k iters), RS256 JWT (jose4j; static keys or IdP JWKS), HttpOnly cookie sessions + refresh rotation with **reuse detection** (family revocation), CSRF double-submit for cookie requests, security headers, rate-limited auth, AES-GCM webhook secrets at rest, non-root container |
 | Retries | Outbox publish: exponential backoff + jitter → DLQ (`OutboxRelay`); consumer redelivery via Redis PEL + XCLAIM, `maxDeliveryAttempts` → DLQ (`StreamConsumerRunner`); webhook in-process retries then PEL/DLQ; Redis client auto-reconnect + keepalive |
 | Multi-tenancy | `org_id` on every tenant row, RLS fail-closed (NULL GUC ⇒ zero rows), tenant only from verified token claims (never client headers), separate RLS-bound app role vs BYPASSRLS worker role |
@@ -57,23 +54,11 @@ mvn clean package       # 28 unit tests, Quarkus augmentation, quarkus-run.jar
 
 ## Configuration
 
-All configuration is environment-driven (`application.properties` +
-`notehive.*` mappings). Secrets required in production:
+All configuration is environment-driven (`application.properties` + `notehive.*` mappings). Secrets required in production:
 
 - `NOTEHIVE_CRYPTO_AES_KEY` — 32-byte base64 (webhook secrets at rest)
 - `NOTEHIVE_CRYPTO_CURSOR_KEY` — 32-byte base64 (pagination cursor HMAC)
-- JWT: `NOTEHIVE_JWT_KEY_MODE=jwks` + `NOTEHIVE_JWT_JWKS_URL` (SSO/Keycloak),
-  or static PEM `NOTEHIVE_JWT_PUBLIC_KEY` / `NOTEHIVE_JWT_PRIVATE_KEY`
-  (dev auto-generates a keypair and warns)
+- JWT: `NOTEHIVE_JWT_KEY_MODE=jwks` + `NOTEHIVE_JWT_JWKS_URL` (SSO/Keycloak), or static PEM `NOTEHIVE_JWT_PUBLIC_KEY` / `NOTEHIVE_JWT_PRIVATE_KEY` (dev auto-generates a keypair and warns)
 - Datasource credentials (RLS app role + BYPASSRLS worker role + migrator for Flyway)
 
-See `docs/ARCHITECTURE.md` for design decisions and `docs/API.md` for the
-endpoint reference.
-
-## Known scope decisions
-
-- Backend only — no frontend is included by design.
-- AI/RAG from the earlier spec is intentionally omitted here (not in this
-  request's focus); the event backbone is the natural place to attach it later.
-- One user belongs to one organization (tenant). Cross-org sharing is rejected
-  by design; teams are the collaboration unit.
+See `docs/ARCHITECTURE.md` for design decisions and `docs/API.md` for the endpoint reference.

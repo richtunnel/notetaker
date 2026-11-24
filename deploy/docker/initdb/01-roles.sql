@@ -34,6 +34,7 @@ WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'notehive')\gexec
 ALTER DATABASE notehive OWNER TO notehive_migrator;
 
 \c notehive
+ALTER SCHEMA public OWNER TO notehive_migrator;
 GRANT notehive_app, notehive_worker TO notehive_migrator WITH ADMIN OPTION;
 GRANT USAGE ON SCHEMA public TO notehive_app, notehive_worker;
 ALTER DATABASE notehive SET synchronous_commit = on;
