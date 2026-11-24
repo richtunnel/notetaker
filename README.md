@@ -54,7 +54,7 @@ mvn clean package       # 28 unit tests, Quarkus augmentation, quarkus-run.jar
 
 ## Configuration
 
-All configuration is environment-driven (`application.properties` + `notehive.*` mappings). Secrets required in production:
+All configuration is environment-driven (`application.properties` + `notehive.*` mappings).
 
 - `NOTEHIVE_CRYPTO_AES_KEY` — 32-byte base64 (webhook secrets at rest)
 - `NOTEHIVE_CRYPTO_CURSOR_KEY` — 32-byte base64 (pagination cursor HMAC)
