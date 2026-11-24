@@ -5,11 +5,33 @@
 --                     role guards inside V1 + ADMIN OPTION to GRANT)
 --  notehive_app       RLS-bound application role (default datasource)
 --  notehive_worker    BYPASSRLS role (worker datasource: bloom rebuild, retention)
-CREATE ROLE notehive_migrator LOGIN CREATEROLE PASSWORD 'notehive_migrator_pw';
-CREATE ROLE notehive_app LOGIN PASSWORD 'notehive_app_pw';
-CREATE ROLE notehive_worker LOGIN BYPASSRLS PASSWORD 'notehive_worker_pw';
+--
+-- Idempotent on purpose: the compose file sets POSTGRES_DB=notehive, so the
+-- docker entrypoint creates the "notehive" database BEFORE this script runs
+-- (a bare CREATE DATABASE here therefore aborts the whole init with
+-- "database already exists", exit code 3). Re-running this file must also be
+-- safe, e.g. to repair a half-initialized volume after a failed first boot.
 
-CREATE DATABASE notehive OWNER notehive_migrator;
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notehive_migrator') THEN
+    CREATE ROLE notehive_migrator LOGIN CREATEROLE PASSWORD 'notehive_migrator_pw';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notehive_app') THEN
+    CREATE ROLE notehive_app LOGIN PASSWORD 'notehive_app_pw';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'notehive_worker') THEN
+    CREATE ROLE notehive_worker LOGIN BYPASSRLS PASSWORD 'notehive_worker_pw';
+  END IF;
+END
+$$;
+
+-- Create the database only when it does not exist yet, then force the
+-- intended owner in every case (entrypoint-created DBs are owned by
+-- POSTGRES_USER; Flyway expects notehive_migrator to own the schema).
+SELECT 'CREATE DATABASE notehive OWNER notehive_migrator'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'notehive')\gexec
+ALTER DATABASE notehive OWNER TO notehive_migrator;
 
 \c notehive
 GRANT notehive_app, notehive_worker TO notehive_migrator WITH ADMIN OPTION;
